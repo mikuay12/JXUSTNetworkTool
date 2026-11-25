@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">校园网连接工具</string>
+    <string name="title">JXUST 校园网</string>
+    <string name="subtitle">连接 Wi-Fi 后，可在这里完成认证或注销</string>
+    <string name="ssid_label">校园 Wi-Fi：JXUST-WLAN</string>
+    <string name="account_hint">校园网账号</string>
+    <string name="password_hint">密码</string>
+    <string name="account_note">认证时会自动添加所选运营商的后缀</string>
+    <string name="carrier_label">运营商</string>
+    <string name="connect_wifi">连接校园 Wi-Fi</string>
+    <string name="login">认证</string>
+    <string name="logout">注销</string>
+    <string name="status_ready">就绪。账号和密码会加密保存在本机。</string>
+    <string-array name="carrier_options">
+        <item>电信（@telecom）</item>
+        <item>移动（@cmcc）</item>
+        <item>联通（@unicom）</item>
+    </string-array>
+</resources>

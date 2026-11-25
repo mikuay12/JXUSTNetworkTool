@@ -1,0 +1,30 @@
+# Local tools and IDE settings
+/.android-tools/
+.idea/
+.vscode/
+*.iml
+local.properties
+
+# Python and Android build outputs
+build/
+dist/
+__pycache__/
+.venv/
+.gradle/
+.local-build/
+*.pyc
+*.exe
+*.apk
+*.aab
+*.idsig
+
+# Local credentials and signing keys
+profiles.dat*
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
