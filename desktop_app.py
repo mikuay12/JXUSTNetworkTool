@@ -20,7 +20,7 @@ from desktop_settings import (
 TITLE = "校园网连接工具"
 VERSION = "1.1.0"
 AUTHOR = "mikuay12"
-LICENSE_NAME = "GPL-3.0"
+LICENSE_NAME = "PolyForm Noncommercial 1.0.0"
 REPO_URL = "https://github.com/mikuay12/JXUSTNetworkTool"
 BACKGROUND = "#eef3f8"
 CARD = "#ffffff"
@@ -260,7 +260,7 @@ class CampusApp:
         rows = (
             ("版本号", f"v{VERSION}"),
             ("作者", AUTHOR),
-            ("开源协议", LICENSE_NAME),
+            ("许可协议", LICENSE_NAME),
         )
         for index, (label, value) in enumerate(rows, start=2):
             ttk.Label(card, text=label, style="Card.TLabel").grid(

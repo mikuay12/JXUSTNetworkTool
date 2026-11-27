@@ -88,7 +88,7 @@ public final class MainActivity extends Activity {
         String repoUrl = getString(R.string.about_repo_url);
         String message = "版本号：v" + versionName
                 + "\n作者：" + getString(R.string.about_author)
-                + "\n开源协议：" + getString(R.string.about_license)
+                + "\n许可协议：" + getString(R.string.about_license)
                 + "\n项目链接：" + repoUrl;
         new AlertDialog.Builder(this)
                 .setTitle(R.string.about_title)

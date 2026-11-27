@@ -15,7 +15,7 @@
     <string name="about">关于</string>
     <string name="about_title">关于校园网连接工具</string>
     <string name="about_author">mikuay12</string>
-    <string name="about_license">GPL-3.0</string>
+    <string name="about_license">PolyForm Noncommercial 1.0.0</string>
     <string name="about_repo_url">https://github.com/mikuay12/JXUSTNetworkTool</string>
     <string name="about_open_repo">打开项目主页</string>
     <string name="close">关闭</string>
