@@ -2,8 +2,13 @@ package com.jxust.campuswlan;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -67,6 +72,36 @@ public final class MainActivity extends Activity {
         wifiButton.setOnClickListener(view -> requestWifiConnection());
         loginButton.setOnClickListener(view -> runPortalAction(true));
         logoutButton.setOnClickListener(view -> runPortalAction(false));
+        findViewById(R.id.button_about).setOnClickListener(view -> showAboutDialog());
+    }
+
+    private void showAboutDialog() {
+        String versionName = "1.1.0";
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (info.versionName != null && !info.versionName.isEmpty()) {
+                versionName = info.versionName;
+            }
+        } catch (PackageManager.NameNotFoundException ignored) {
+            // Fall back to default version name.
+        }
+        String repoUrl = getString(R.string.about_repo_url);
+        String message = "版本号：v" + versionName
+                + "\n作者：" + getString(R.string.about_author)
+                + "\n开源协议：" + getString(R.string.about_license)
+                + "\n项目链接：" + repoUrl;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.about_title)
+                .setMessage(message)
+                .setPositiveButton(R.string.about_open_repo, (dialog, which) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl)));
+                    } catch (ActivityNotFoundException ignored) {
+                        setStatus("未找到可用的浏览器打开项目链接。", true);
+                    }
+                })
+                .setNegativeButton(R.string.close, null)
+                .show();
     }
 
     private void requestWifiConnection() {

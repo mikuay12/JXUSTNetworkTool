@@ -28,4 +28,4 @@ py -m PyInstaller CampusWLAN.spec
 
 ## 许可
 
-本项目采用 [PolyForm Noncommercial License 1.0.0](LICENSE)。除许可明确允许的情形外，商用须另行取得权利人授权。
+本项目采用 [GNU General Public License v3.0 (GPL-3.0)](LICENSE) 开源。

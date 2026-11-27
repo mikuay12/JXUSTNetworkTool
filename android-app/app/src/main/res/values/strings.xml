@@ -12,6 +12,13 @@
     <string name="login">认证</string>
     <string name="logout">注销</string>
     <string name="status_ready">就绪。账号和密码会加密保存在本机。</string>
+    <string name="about">关于</string>
+    <string name="about_title">关于校园网连接工具</string>
+    <string name="about_author">mikuay12</string>
+    <string name="about_license">GPL-3.0</string>
+    <string name="about_repo_url">https://github.com/mikuay12/JXUSTNetworkTool</string>
+    <string name="about_open_repo">打开项目主页</string>
+    <string name="close">关闭</string>
     <string-array name="carrier_options">
         <item>电信（@telecom）</item>
         <item>移动（@cmcc）</item>

@@ -1,11 +1,14 @@
 """The unified Windows application for wired and wireless campus access."""
 
+import ctypes
 from dataclasses import replace
 import queue
+import sys
 import threading
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
+import webbrowser
 
 import campus_network
 from desktop_settings import (
@@ -15,12 +18,37 @@ from desktop_settings import (
 
 
 TITLE = "校园网连接工具"
+VERSION = "1.1.0"
+AUTHOR = "mikuay12"
+LICENSE_NAME = "GPL-3.0"
+REPO_URL = "https://github.com/mikuay12/JXUSTNetworkTool"
 BACKGROUND = "#eef3f8"
 CARD = "#ffffff"
 INK = "#142640"
 MUTED = "#536882"
 BLUE = "#1759cf"
 FONT = "Microsoft YaHei UI"
+
+
+def _enable_dpi_awareness() -> None:
+    if sys.platform != "win32":
+        return
+    try:
+        # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
+        ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+        return
+    except (AttributeError, OSError):
+        pass
+    try:
+        # PROCESS_SYSTEM_DPI_AWARE = 1
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        return
+    except (AttributeError, OSError):
+        pass
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except (AttributeError, OSError):
+        pass
 
 
 class CampusApp:
@@ -46,6 +74,8 @@ class CampusApp:
         self.running_mode = ""
         self.pending = None
         self.events = queue.SimpleQueue()
+        self.about_dialog = None
+        self.scale = max(1.0, self.root.winfo_fpixels("1i") / 96.0)
 
         self._create_widgets()
         self._update_account_list()
@@ -65,11 +95,17 @@ class CampusApp:
             self._update_controls()
         root.after(100, self._poll)
 
+    def _px(self, value: int) -> int:
+        return max(1, round(value * self.scale)) if value > 0 else 0
+
+    def _pad(self, *values: int) -> tuple[int, ...]:
+        return tuple(self._px(v) for v in values)
+
     def _create_widgets(self):
         self.root.title(TITLE)
         self.root.configure(background=BACKGROUND)
-        self.root.geometry("598x550")
-        self.root.minsize(520, 510)
+        self.root.geometry(f"{self._px(598)}x{self._px(550)}")
+        self.root.minsize(self._px(520), self._px(510))
         self.root.option_add("*TCombobox*Listbox.font", (FONT, 10))
 
         style = ttk.Style(self.root)
@@ -79,13 +115,24 @@ class CampusApp:
         style.configure("Status.TLabel", font=(FONT, 10, "bold"), foreground=BLUE)
         style.configure("Card.TFrame", background=CARD)
         style.configure("Card.TLabel", background=CARD, foreground=MUTED)
+        style.configure("CardValue.TLabel", background=CARD, foreground=INK)
+        style.configure("Link.TLabel", background=CARD, foreground=BLUE, font=(FONT, 10, "underline"))
         style.configure("Section.TLabel", background=CARD, font=(FONT, 11, "bold"), foreground=INK)
-        style.configure("Card.TCheckbutton", background=CARD)
+        style.configure("Card.TCheckbutton", background=CARD, indicatorsize=self._px(14))
         style.map("Card.TCheckbutton", background=[("active", CARD)])
-        style.configure("TEntry", padding=(7, 5), fieldbackground=CARD, bordercolor="#acbed4")
-        style.configure("TCombobox", padding=(7, 5), fieldbackground=CARD, bordercolor="#acbed4")
-        style.map("TCombobox", fieldbackground=[("readonly", CARD)])
-        style.configure("TButton", padding=(12, 6), background=CARD, bordercolor="#acbed4")
+        style.configure("TEntry", padding=self._pad(7, 5), fieldbackground=CARD, bordercolor="#acbed4")
+        style.configure(
+            "TCombobox", padding=self._pad(7, 5), fieldbackground=CARD,
+            bordercolor="#acbed4", arrowsize=self._px(14),
+        )
+        style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", CARD)],
+            selectbackground=[("readonly", CARD)],
+            selectforeground=[("readonly", INK)],
+        )
+        style.configure("TScrollbar", arrowsize=self._px(14))
+        style.configure("TButton", padding=self._pad(12, 6), background=CARD, bordercolor="#acbed4")
         style.map("TButton", background=[("pressed", "#dae6f6"), ("active", "#e6effc")])
         style.configure("Primary.TButton", background=BLUE, foreground=CARD, bordercolor=BLUE)
         style.map(
@@ -94,81 +141,154 @@ class CampusApp:
             foreground=[("disabled", MUTED), ("!disabled", CARD)],
         )
 
-        body = ttk.Frame(self.root, padding=(22, 16, 22, 18))
+        body = ttk.Frame(self.root, padding=self._pad(22, 16, 22, 18))
         body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1)
         body.rowconfigure(3, weight=1)
 
         header = ttk.Frame(body)
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 13))
+        header.grid(row=0, column=0, sticky="ew", pady=(0, self._px(13)))
         header.columnconfigure(0, weight=1)
         ttk.Label(header, text=TITLE, style="Title.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(header, textvariable=self.status, style="Status.TLabel").grid(row=0, column=1, sticky="e")
 
-        form = ttk.Frame(body, style="Card.TFrame", padding=(17, 11, 17, 12))
+        form = ttk.Frame(body, style="Card.TFrame", padding=self._pad(17, 11, 17, 12))
         form.grid(row=1, column=0, sticky="ew")
         form.columnconfigure(1, weight=1)
         form.columnconfigure(3, weight=1)
 
-        ttk.Label(form, text="账号", style="Card.TLabel").grid(row=0, column=0, sticky="w", padx=(0, 12), pady=4)
+        row_pad = self._px(4)
+        label_gap = self._px(12)
+
+        ttk.Label(form, text="账号", style="Card.TLabel").grid(row=0, column=0, sticky="w", padx=(0, label_gap), pady=row_pad)
         self.account_box = ttk.Combobox(form, textvariable=self.account)
-        self.account_box.grid(row=0, column=1, columnspan=3, sticky="ew", pady=4)
+        self.account_box.grid(row=0, column=1, columnspan=3, sticky="ew", pady=row_pad)
         self.account_box.bind("<<ComboboxSelected>>", self._account_selected)
 
-        ttk.Label(form, text="密码", style="Card.TLabel").grid(row=1, column=0, sticky="w", padx=(0, 12), pady=4)
+        ttk.Label(form, text="密码", style="Card.TLabel").grid(row=1, column=0, sticky="w", padx=(0, label_gap), pady=row_pad)
         ttk.Entry(form, textvariable=self.password, show="•").grid(
-            row=1, column=1, columnspan=3, sticky="ew", pady=4,
+            row=1, column=1, columnspan=3, sticky="ew", pady=row_pad,
         )
 
-        ttk.Label(form, text="运营商", style="Card.TLabel").grid(row=2, column=0, sticky="w", padx=(0, 12), pady=4)
+        ttk.Label(form, text="运营商", style="Card.TLabel").grid(row=2, column=0, sticky="w", padx=(0, label_gap), pady=row_pad)
         self.carrier_box = ttk.Combobox(form, values=tuple(CARRIERS.values()), state="readonly", width=10)
         self.carrier_box.current(tuple(CARRIERS).index(DEFAULT_CARRIER))
-        self.carrier_box.grid(row=2, column=1, sticky="ew", pady=4)
+        self.carrier_box.grid(row=2, column=1, sticky="ew", pady=row_pad)
         self.carrier_box.bind("<<ComboboxSelected>>", self._carrier_selected)
 
-        ttk.Label(form, text="连接方式", style="Card.TLabel").grid(row=2, column=2, sticky="w", padx=(15, 12), pady=4)
+        ttk.Label(form, text="连接方式", style="Card.TLabel").grid(
+            row=2, column=2, sticky="w", padx=(self._px(15), label_gap), pady=row_pad,
+        )
         self.mode_box = ttk.Combobox(form, values=tuple(CONNECTION_MODES.values()), state="readonly", width=10)
         self.mode_box.current(tuple(CONNECTION_MODES).index(self.settings.mode))
-        self.mode_box.grid(row=2, column=3, sticky="ew", pady=4)
+        self.mode_box.grid(row=2, column=3, sticky="ew", pady=row_pad)
         self.mode_box.bind("<<ComboboxSelected>>", self._mode_selected)
 
-        ttk.Label(form, text="检测间隔", style="Card.TLabel").grid(row=3, column=0, sticky="w", padx=(0, 12), pady=4)
+        ttk.Label(form, text="检测间隔", style="Card.TLabel").grid(row=3, column=0, sticky="w", padx=(0, label_gap), pady=row_pad)
         interval_row = ttk.Frame(form, style="Card.TFrame")
-        interval_row.grid(row=3, column=1, sticky="w", pady=4)
+        interval_row.grid(row=3, column=1, sticky="w", pady=row_pad)
         ttk.Entry(interval_row, textvariable=self.interval, width=8).pack(side="left")
-        ttk.Label(interval_row, text="秒", style="Card.TLabel").pack(side="left", padx=(7, 0))
+        ttk.Label(interval_row, text="秒", style="Card.TLabel").pack(side="left", padx=(self._px(7), 0))
 
         ttk.Checkbutton(
             form, text="开机启动", variable=self.startup, command=self._toggle_startup, style="Card.TCheckbutton",
-        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(5, 0))
+        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(self._px(5), 0))
         ttk.Button(form, text="保存账号", command=self._save_account).grid(
-            row=4, column=2, columnspan=2, sticky="e", pady=(5, 0),
+            row=4, column=2, columnspan=2, sticky="e", pady=(self._px(5), 0),
         )
 
         actions = ttk.Frame(body)
-        actions.grid(row=2, column=0, sticky="ew", pady=12)
+        actions.grid(row=2, column=0, sticky="ew", pady=self._px(12))
         self.start_button = ttk.Button(actions, command=self._start, style="Primary.TButton", width=13)
-        self.start_button.pack(side="left", padx=(0, 8))
+        self.start_button.pack(side="left", padx=(0, self._px(8)))
         self.stop_button = ttk.Button(actions, text="停止运行", command=self._stop)
-        self.stop_button.pack(side="left", padx=(0, 8))
+        self.stop_button.pack(side="left", padx=(0, self._px(8)))
         self.logout_button = ttk.Button(actions, text="立即注销", command=self._logout)
         self.logout_button.pack(side="left")
+        ttk.Button(actions, text="关于", command=self._show_about).pack(side="right")
 
-        logs = ttk.Frame(body, style="Card.TFrame", padding=(14, 9, 12, 10))
+        logs = ttk.Frame(body, style="Card.TFrame", padding=self._pad(14, 9, 12, 10))
         logs.grid(row=3, column=0, sticky="nsew")
         logs.columnconfigure(0, weight=1)
         logs.rowconfigure(1, weight=1)
-        ttk.Label(logs, text="运行日志", style="Section.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 6))
+        ttk.Label(logs, text="运行日志", style="Section.TLabel").grid(row=0, column=0, sticky="w", pady=(0, self._px(6)))
         scrollbar = ttk.Scrollbar(logs, orient="vertical")
         scrollbar.grid(row=1, column=1, sticky="ns")
         self.log_view = tk.Text(
             logs, height=5, width=1, font=(FONT, 10), background=CARD, foreground=MUTED,
-            relief="flat", borderwidth=0, highlightthickness=0, wrap="word", spacing1=3,
+            relief="flat", borderwidth=0, highlightthickness=0, wrap="word", spacing1=self._px(3),
             yscrollcommand=scrollbar.set, state="disabled",
         )
         self.log_view.grid(row=1, column=0, sticky="nsew")
         scrollbar.configure(command=self.log_view.yview)
         self.account_box.focus_set()
+
+    def _show_about(self):
+        if self.about_dialog is not None and self.about_dialog.winfo_exists():
+            self.about_dialog.lift()
+            self.about_dialog.focus_force()
+            return
+
+        dialog = tk.Toplevel(self.root)
+        self.about_dialog = dialog
+        dialog.title(f"关于 - {TITLE}")
+        dialog.configure(background=BACKGROUND)
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+
+        def close(_event=None):
+            self.about_dialog = None
+            dialog.destroy()
+
+        dialog.protocol("WM_DELETE_WINDOW", close)
+        dialog.bind("<Escape>", close)
+
+        container = ttk.Frame(dialog, padding=self._pad(20, 16, 20, 16))
+        container.pack(fill="both", expand=True)
+
+        card = ttk.Frame(container, style="Card.TFrame", padding=self._pad(18, 14, 18, 14))
+        card.pack(fill="both", expand=True)
+        card.columnconfigure(1, weight=1)
+
+        ttk.Label(card, text=TITLE, style="Section.TLabel").grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(0, self._px(2)),
+        )
+        ttk.Label(card, text="江西理工大学校园网连接工具", style="Card.TLabel").grid(
+            row=1, column=0, columnspan=2, sticky="w", pady=(0, self._px(12)),
+        )
+
+        rows = (
+            ("版本号", f"v{VERSION}"),
+            ("作者", AUTHOR),
+            ("开源协议", LICENSE_NAME),
+        )
+        for index, (label, value) in enumerate(rows, start=2):
+            ttk.Label(card, text=label, style="Card.TLabel").grid(
+                row=index, column=0, sticky="w", padx=(0, self._px(16)), pady=self._px(3),
+            )
+            ttk.Label(card, text=value, style="CardValue.TLabel").grid(
+                row=index, column=1, sticky="w", pady=self._px(3),
+            )
+
+        ttk.Label(card, text="项目链接", style="Card.TLabel").grid(
+            row=5, column=0, sticky="w", padx=(0, self._px(16)), pady=self._px(3),
+        )
+        link = ttk.Label(card, text=REPO_URL, style="Link.TLabel", cursor="hand2")
+        link.grid(row=5, column=1, sticky="w", pady=self._px(3))
+        link.bind("<Button-1>", lambda _event: webbrowser.open(REPO_URL))
+
+        footer = ttk.Frame(container)
+        footer.pack(fill="x", pady=(self._px(12), 0))
+        ttk.Button(footer, text="关闭", command=close).pack(side="right")
+
+        dialog.update_idletasks()
+        width = dialog.winfo_reqwidth()
+        height = dialog.winfo_reqheight()
+        x = self.root.winfo_rootx() + (self.root.winfo_width() - width) // 2
+        y = self.root.winfo_rooty() + (self.root.winfo_height() - height) // 2
+        dialog.geometry(f"+{max(0, x)}+{max(0, y)}")
+        dialog.grab_set()
+        dialog.focus_force()
 
     def _update_account_list(self):
         self.account_box.configure(values=tuple(sorted(self.settings.profiles)))
@@ -351,6 +471,7 @@ class CampusApp:
 
 
 def main(default_mode: str = "wifi"):
+    _enable_dpi_awareness()
     with single_instance() as acquired:
         root = tk.Tk()
         if not acquired:
