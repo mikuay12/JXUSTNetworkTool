@@ -17,6 +17,7 @@
     <string name="about_author">mikuay12</string>
     <string name="about_license">PolyForm Noncommercial 1.0.0</string>
     <string name="about_repo_url">https://github.com/mikuay12/JXUSTNetworkTool</string>
+    <string name="about_tips">如果连接失败，请尝试：\n- 关闭代理软件\n- 检查手动认证是否可行</string>
     <string name="about_open_repo">打开项目主页</string>
     <string name="close">关闭</string>
     <string-array name="carrier_options">

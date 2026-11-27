@@ -277,6 +277,16 @@ class CampusApp:
         link.grid(row=5, column=1, sticky="w", pady=self._px(3))
         link.bind("<Button-1>", lambda _event: webbrowser.open(REPO_URL))
 
+        ttk.Separator(card, orient="horizontal").grid(
+            row=6, column=0, columnspan=2, sticky="ew", pady=self._px(10),
+        )
+        ttk.Label(
+            card,
+            text="如果连接失败，请尝试：\n- 关闭代理软件\n- 检查手动认证是否可行",
+            style="Card.TLabel",
+            justify="left",
+        ).grid(row=7, column=0, columnspan=2, sticky="w")
+
         footer = ttk.Frame(container)
         footer.pack(fill="x", pady=(self._px(12), 0))
         ttk.Button(footer, text="关闭", command=close).pack(side="right")

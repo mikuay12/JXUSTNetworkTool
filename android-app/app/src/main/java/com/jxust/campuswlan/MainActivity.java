@@ -89,7 +89,8 @@ public final class MainActivity extends Activity {
         String message = "版本号：v" + versionName
                 + "\n作者：" + getString(R.string.about_author)
                 + "\n许可协议：" + getString(R.string.about_license)
-                + "\n项目链接：" + repoUrl;
+                + "\n项目链接：" + repoUrl
+                + "\n\n" + getString(R.string.about_tips);
         new AlertDialog.Builder(this)
                 .setTitle(R.string.about_title)
                 .setMessage(message)
