@@ -4,6 +4,10 @@
 
 开启代理可能会影响本软件使用。
 
+## 下载
+
+- 蓝奏云下载：<https://wwamb.lanzoul.com/b01i61kqyd>（密码：`c80v`）
+
 ## Windows
 
 支持有线和 `JXUST-WLAN` 无线接入、自动认证、注销、开机启动及多账号切换。每个账号记住自己的运营商，账号和密码由 Windows DPAPI 加密保存。
